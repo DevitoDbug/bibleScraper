@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/gocolly/colly"
+	"log"
+	"os"
 )
 
 type Data struct {
@@ -31,7 +33,7 @@ func main() {
 	})
 
 	var data []Data
-	c.OnHTML("a[target=display][href='GEN+1.html']", func(element *colly.HTMLElement) {
+	c.OnHTML("a[target=display]", func(element *colly.HTMLElement) {
 		//text := element.Text
 		href := element.Attr("href")
 		err := c.Visit(element.Request.AbsoluteURL(href))
@@ -76,6 +78,41 @@ func main() {
 		fmt.Println("Could not visit site:\n", err)
 		return
 	}
+
+	file, err := os.Create("output.txt")
+	if err != nil {
+		fmt.Println("Error creating file:", err)
+		return
+	}
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			panic("Could not close file")
+		}
+	}(file)
+
+	// Write the 'data' struct to the file
+	for _, item := range data {
+		for _, contentItem := range item.Content {
+			_, err := fmt.Fprintln(file, "Verse:", contentItem.Verse)
+			if err != nil {
+				log.Fatal("Could not write verse to file")
+				return
+			}
+			_, err = fmt.Fprintln(file, "VerseData:", contentItem.VerseData)
+			if err != nil {
+				log.Fatal("Could not write VerseData to file")
+				return
+			}
+		}
+		_, err := fmt.Fprintf(file, "\n\n\n")
+		if err != nil {
+			log.Fatal("Could not write line brakes to file")
+			return
+		}
+	}
+
+	fmt.Println("Data written to output.txt")
 
 	// Print or process the 'data' slice as needed
 	fmt.Println(data)
