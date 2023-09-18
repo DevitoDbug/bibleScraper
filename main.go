@@ -34,21 +34,28 @@ func main() {
 	})
 
 	var data []Data
+	var book string
 	c.OnHTML("a[target=display]", func(element *colly.HTMLElement) {
-		//text := element.Text
 		href := element.Attr("href")
 		err := c.Visit(element.Request.AbsoluteURL(href))
 		if err != nil {
 			fmt.Println("Could not visit verse:\n", err)
 			return
 		}
-
 	})
 
-	c.OnHTML("b", func(e *colly.HTMLElement) {
-		bElements := e.Text
+	c.OnHTML("b", func(element2 *colly.HTMLElement) {
+		book = element2.Text
+	})
+
+	c.OnHTML("dl", func(e *colly.HTMLElement) {
 		dtElements := e.DOM.Find("dt")
 		ddElements := e.DOM.Find("dd")
+
+		fmt.Println(book)
+		fmt.Println(dtElements.Length())
+		fmt.Println(ddElements.Length())
+		fmt.Print("\n\n\n")
 
 		// Checking if we have the same number of verses and verses data
 		if ddElements.Length() != dtElements.Length() {
@@ -61,14 +68,14 @@ func main() {
 		for i := 0; i < dtElements.Length(); i++ {
 			verseNum := dtElements.Eq(i).Text()
 			verseData := ddElements.Eq(i).Text()
+
 			content = append(content, VerseDataPair{
 				Verse:     verseNum,
 				VerseData: verseData,
 			})
 		}
-
 		newData := Data{
-			Chapter: bElements,
+			Chapter: book,
 			Content: content,
 		}
 
@@ -106,6 +113,6 @@ func main() {
 		return
 	}
 
-	fmt.Println("Data written to output.txt")
+	fmt.Println("Data written to output.json")
 
 }
