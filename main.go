@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gocolly/colly"
 	"log"
@@ -8,13 +9,13 @@ import (
 )
 
 type Data struct {
-	Chapter string
-	Content []VerseDataPair
+	Chapter string          `json:"chapter"`
+	Content []VerseDataPair `json:"content"`
 }
 
 type VerseDataPair struct {
-	Verse     string
-	VerseData string
+	Verse     string `json:"verse"`
+	VerseData string `json:"verseData"`
 }
 
 func main() {
@@ -43,8 +44,9 @@ func main() {
 		}
 
 	})
-	c.OnHTML("dl", func(e *colly.HTMLElement) {
-		fmt.Println("hello")
+
+	c.OnHTML("b", func(e *colly.HTMLElement) {
+		bElements := e.Text
 		dtElements := e.DOM.Find("dt")
 		ddElements := e.DOM.Find("dd")
 
@@ -59,14 +61,14 @@ func main() {
 		for i := 0; i < dtElements.Length(); i++ {
 			verseNum := dtElements.Eq(i).Text()
 			verseData := ddElements.Eq(i).Text()
-			content = append(content, struct {
-				Verse     string
-				VerseData string
-			}{Verse: verseNum, VerseData: verseData})
+			content = append(content, VerseDataPair{
+				Verse:     verseNum,
+				VerseData: verseData,
+			})
 		}
 
 		newData := Data{
-			Chapter: "text",
+			Chapter: bElements,
 			Content: content,
 		}
 
@@ -79,7 +81,7 @@ func main() {
 		return
 	}
 
-	file, err := os.Create("output.txt")
+	file, err := os.Create("output.json")
 	if err != nil {
 		fmt.Println("Error creating file:", err)
 		return
@@ -91,29 +93,19 @@ func main() {
 		}
 	}(file)
 
-	// Write the 'data' struct to the file
-	for _, item := range data {
-		for _, contentItem := range item.Content {
-			_, err := fmt.Fprintln(file, "Verse:", contentItem.Verse)
-			if err != nil {
-				log.Fatal("Could not write verse to file")
-				return
-			}
-			_, err = fmt.Fprintln(file, "VerseData:", contentItem.VerseData)
-			if err != nil {
-				log.Fatal("Could not write VerseData to file")
-				return
-			}
-		}
-		_, err := fmt.Fprintf(file, "\n\n\n")
-		if err != nil {
-			log.Fatal("Could not write line brakes to file")
-			return
-		}
+	jsonData, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		log.Fatal("Could not marshal data to JSON:", err)
+		return
+	}
+
+	// Write the JSON data to the file
+	_, err = file.Write(jsonData)
+	if err != nil {
+		log.Fatal("Could not write JSON data to file:", err)
+		return
 	}
 
 	fmt.Println("Data written to output.txt")
 
-	// Print or process the 'data' slice as needed
-	fmt.Println(data)
 }
